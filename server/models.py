@@ -4,6 +4,14 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy import Boolean, DateTime, Column, Integer, \
                     String, ForeignKey
+from marshmallow import EXCLUDE
+from marshmallow.fields import Nested
+from marshmallow_sqlalchemy import (
+    SQLAlchemyAutoSchema,
+    SQLAlchemySchema,
+    auto_field,
+    fields,
+)
 
 class RolesUsers(Base):
     __tablename__ = 'roles_users'
@@ -34,3 +42,32 @@ class User(Base, UserMixin):
     confirmed_at = Column(DateTime())
     roles = relationship('Role', secondary='roles_users',
                          backref=backref('users', lazy='dynamic'))
+
+class RoleSummarySchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = Role
+        load_instance = True
+        unknown = EXCLUDE
+
+    id = auto_field(dump_only=True)
+    name = auto_field(dump_only=True)
+    permissions = auto_field(dump_only=True)
+class UserSchema(SQLAlchemySchema):
+    class Meta:
+        model = User
+        load_instance = True
+        unknown = EXCLUDE
+
+    id = auto_field(dump_only=True)
+    email = auto_field()
+    password = auto_field(load_only=True)
+    username = auto_field()
+    active = auto_field()
+    current_login_at = auto_field(dump_only=True)
+    last_login_at = auto_field(dump_only=True)
+    current_login_ip = auto_field(dump_only=True)
+    last_login_ip = auto_field(dump_only=True)
+    roles = Nested(RoleSummarySchema, many=True)
+
+
+user_schema = UserSchema()

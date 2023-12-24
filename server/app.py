@@ -1,15 +1,17 @@
 import os
 
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, Blueprint
 from flask_security import Security, current_user, auth_required, hash_password, \
      SQLAlchemySessionUserDatastore, permissions_accepted
 from database import db_session, init_db
-from models import User, Role
+from models import User, Role, user_schema
 from flask_wtf import CSRFProtect
+import json
 
 # Create app
 app = Flask(__name__)
 app.config['DEBUG'] = True
+url_prefix="/admin"
 
 # Generate a nice key using secrets.token_urlsafe()
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", 'pf9Wkove4IKEAXvy-cQkeDPhv9Cb3Ag-wyJILbq_dFw')
@@ -30,7 +32,7 @@ app.config["SECURITY_FLASH_MESSAGES"] = False
 
 # Need to be able to route backend flask API calls. Use 'admin'
 # to be the Flask-Security endpoints.
-app.config["SECURITY_URL_PREFIX"] = '/admin'
+app.config["SECURITY_URL_PREFIX"] = url_prefix
 
 
 # These need to be defined to handle redirects
@@ -40,7 +42,6 @@ app.config["SECURITY_CONFIRM_ERROR_VIEW"] = "/confirm-error"
 app.config["SECURITY_RESET_VIEW"] = "/reset-password"
 app.config["SECURITY_RESET_ERROR_VIEW"] = "/reset-password-error"
 app.config["SECURITY_REDIRECT_BEHAVIOR"] = "spa"
-app.config["SECURITY_POST_LOGOUT_VIEW"] = "/login"
 app.config["SECURITY_POST_LOGIN_VIEW"] = "/"
 app.config["SECURITY_RECOVERABLE"] = True
 
@@ -68,17 +69,20 @@ app.teardown_appcontext(lambda exc: db_session.close())
 user_datastore = SQLAlchemySessionUserDatastore(db_session, User, Role)
 app.security = Security(app, user_datastore)
 
+admin_blueprint = Blueprint("admin_blueprint",url_prefix)
 # Views
-@app.route("/")
+@admin_blueprint.route("/")
 @auth_required()
 def home():
     return render_template_string('Hello {{current_user.email}}!')
 
-@app.route("/user")
+@admin_blueprint.route("/current_user")
 @auth_required()
 @permissions_accepted("user-read")
-def user_home():
-    return render_template_string("Hello {{ current_user.email }} you are a user!")
+def get_current_user():
+    return user_schema.dumps(current_user)
+
+app.register_blueprint(admin_blueprint,url_prefix=url_prefix)
 
 # one time setup
 with app.app_context():

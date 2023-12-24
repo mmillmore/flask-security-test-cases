@@ -1,7 +1,9 @@
 export default function Home() {
   return (
     <p>
-      <a href="/admin/logout">Logout</a>
+      <form method="post" action="/admin/logout">
+        <button type="submit">Logout</button>
+      </form>
     </p>
   );
 }
